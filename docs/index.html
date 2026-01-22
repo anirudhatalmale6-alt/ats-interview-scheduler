@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATS Pro - Interview Scheduler Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    .stage-card { min-height: 500px; }
+    .candidate-card { cursor: grab; }
+    .candidate-card:active { cursor: grabbing; }
+    .modal { display: none; }
+    .modal.active { display: flex; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body class="bg-gray-50 font-sans">
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+          </div>
+          <span class="text-xl font-semibold text-gray-900" id="companyName">ATS Pro</span>
+          <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">Demo</span>
+        </div>
+        <nav class="flex space-x-1">
+          <button onclick="showTab('pipeline')" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg text-blue-600 bg-blue-50" data-tab="pipeline">Pipeline</button>
+          <button onclick="showTab('interviews')" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-100" data-tab="interviews">Interviews</button>
+          <button onclick="showTab('settings')" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-100" data-tab="settings">Settings</button>
+        </nav>
+        <button onclick="openAddCandidateModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center space-x-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          <span>Add Candidate</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Stats Bar -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white rounded-xl p-4 border border-gray-200">
+        <p class="text-sm text-gray-500">Total Candidates</p>
+        <p class="text-2xl font-semibold text-gray-900" id="statTotal">0</p>
+      </div>
+      <div class="bg-white rounded-xl p-4 border border-gray-200">
+        <p class="text-sm text-gray-500">In Interview Stage</p>
+        <p class="text-2xl font-semibold text-blue-600" id="statInterview">0</p>
+      </div>
+      <div class="bg-white rounded-xl p-4 border border-gray-200">
+        <p class="text-sm text-gray-500">Upcoming Interviews</p>
+        <p class="text-2xl font-semibold text-green-600" id="statUpcoming">0</p>
+      </div>
+      <div class="bg-white rounded-xl p-4 border border-gray-200">
+        <p class="text-sm text-gray-500">This Week</p>
+        <p class="text-2xl font-semibold text-purple-600" id="statThisWeek">0</p>
+      </div>
+    </div>
+
+    <!-- Pipeline Tab -->
+    <div id="pipeline" class="tab-content active">
+      <div class="flex space-x-4 overflow-x-auto pb-4">
+        <!-- Applied Column -->
+        <div class="flex-shrink-0 w-72">
+          <div class="bg-gray-100 rounded-xl p-3 stage-card" data-stage="applied">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-gray-700">Applied</h3>
+              <span class="bg-gray-200 text-gray-600 text-xs font-medium px-2 py-1 rounded-full stage-count" data-stage="applied">0</span>
+            </div>
+            <div class="space-y-3 candidates-container" data-stage="applied"></div>
+          </div>
+        </div>
+
+        <!-- Phone Screen Column -->
+        <div class="flex-shrink-0 w-72">
+          <div class="bg-yellow-50 rounded-xl p-3 stage-card" data-stage="phone_screen">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-yellow-700">Phone Screen</h3>
+              <span class="bg-yellow-200 text-yellow-700 text-xs font-medium px-2 py-1 rounded-full stage-count" data-stage="phone_screen">0</span>
+            </div>
+            <div class="space-y-3 candidates-container" data-stage="phone_screen"></div>
+          </div>
+        </div>
+
+        <!-- Interview Column -->
+        <div class="flex-shrink-0 w-72">
+          <div class="bg-blue-50 rounded-xl p-3 stage-card" data-stage="interview">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-blue-700">Interview</h3>
+              <span class="bg-blue-200 text-blue-700 text-xs font-medium px-2 py-1 rounded-full stage-count" data-stage="interview">0</span>
+            </div>
+            <div class="space-y-3 candidates-container" data-stage="interview"></div>
+          </div>
+        </div>
+
+        <!-- Offer Column -->
+        <div class="flex-shrink-0 w-72">
+          <div class="bg-purple-50 rounded-xl p-3 stage-card" data-stage="offer">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-purple-700">Offer</h3>
+              <span class="bg-purple-200 text-purple-700 text-xs font-medium px-2 py-1 rounded-full stage-count" data-stage="offer">0</span>
+            </div>
+            <div class="space-y-3 candidates-container" data-stage="offer"></div>
+          </div>
+        </div>
+
+        <!-- Hired Column -->
+        <div class="flex-shrink-0 w-72">
+          <div class="bg-green-50 rounded-xl p-3 stage-card" data-stage="hired">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-green-700">Hired</h3>
+              <span class="bg-green-200 text-green-700 text-xs font-medium px-2 py-1 rounded-full stage-count" data-stage="hired">0</span>
+            </div>
+            <div class="space-y-3 candidates-container" data-stage="hired"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interviews Tab -->
+    <div id="interviews" class="tab-content">
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 class="text-lg font-semibold text-gray-900">Scheduled Interviews</h2>
+          <button onclick="openScheduleModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center space-x-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <span>Schedule Interview</span>
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Candidate</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Interviewers</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="interviewsTableBody" class="bg-white divide-y divide-gray-200">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Calendar Integration Card -->
+      <div class="mt-6 bg-white rounded-xl border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-semibold text-gray-900">Google Calendar Integration</h3>
+              <p class="text-sm text-gray-500">Sync interviews with your Google Calendar</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3">
+            <span class="flex items-center text-green-600 text-sm">
+              <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+              </svg>
+              Connected
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="settings" class="tab-content">
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Branding Settings -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Branding</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+              <input type="text" id="settingsCompanyName" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="Your Company">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Primary Color</label>
+              <div class="flex items-center space-x-3">
+                <input type="color" id="settingsPrimaryColor" class="w-12 h-10 rounded border border-gray-300 cursor-pointer" value="#2563eb">
+                <input type="text" id="settingsPrimaryColorText" class="flex-1 border border-gray-300 rounded-lg px-3 py-2" value="#2563eb">
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Logo URL</label>
+              <input type="text" id="settingsLogo" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="https://example.com/logo.png">
+            </div>
+            <button onclick="saveSettings()" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">Save Branding</button>
+          </div>
+        </div>
+
+        <!-- Email Templates -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Email Templates</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Interview Invite Template</label>
+              <textarea id="templateInvite" rows="5" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono">Dear {{candidateName}},
+
+We are pleased to invite you for an interview for the {{position}} position.
+
+Date: {{date}}
+Time: {{time}}
+Location: {{location}}
+
+Best regards,
+{{companyName}} Team</textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Reminder Template</label>
+              <textarea id="templateReminder" rows="5" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono">Dear {{candidateName}},
+
+This is a reminder about your interview tomorrow.
+
+Date: {{date}}
+Time: {{time}}
+
+Best regards,
+{{companyName}} Team</textarea>
+            </div>
+            <p class="text-xs text-gray-500">Variables: {{candidateName}}, {{position}}, {{date}}, {{time}}, {{location}}, {{companyName}}</p>
+            <button onclick="showToast('Templates saved!')" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">Save Templates</button>
+          </div>
+        </div>
+
+        <!-- Notification Settings -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Notifications</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Send reminder before interview (hours)</label>
+              <input type="number" id="settingsReminderHours" class="w-full border border-gray-300 rounded-lg px-3 py-2" value="24" min="1" max="72">
+            </div>
+            <div class="flex items-center justify-between py-2">
+              <span class="text-sm text-gray-700">Email notifications</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between py-2">
+              <span class="text-sm text-gray-700">Calendar sync</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Integration Status -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Integrations</h3>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-white rounded flex items-center justify-center">
+                  <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                </div>
+                <span class="text-sm font-medium text-gray-700">Google Calendar</span>
+              </div>
+              <span class="text-green-600 text-sm font-medium">Connected</span>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-white rounded flex items-center justify-center">
+                  <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#0078D4" d="M21.17 2.06H8.3c-.34 0-.67.07-.97.2L3.14 4.43c-.6.27-.97.87-.97 1.52v12.1c0 .65.37 1.25.97 1.52l4.19 2.17c.3.13.63.2.97.2h12.87c.92 0 1.66-.74 1.66-1.66V3.72c0-.92-.74-1.66-1.66-1.66z"/></svg>
+                </div>
+                <span class="text-sm font-medium text-gray-700">Outlook Calendar</span>
+              </div>
+              <button class="text-blue-600 text-sm font-medium hover:text-blue-700">Connect</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add Candidate Modal -->
+  <div id="addCandidateModal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 overflow-hidden">
+      <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900">Add New Candidate</h3>
+      </div>
+      <form id="addCandidateForm" class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+          <input type="text" name="name" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+          <input type="email" name="email" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+          <input type="tel" name="phone" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Position *</label>
+          <input type="text" name="position" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+          <textarea name="notes" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2"></textarea>
+        </div>
+        <div class="flex space-x-3 pt-4">
+          <button type="button" onclick="closeAddCandidateModal()" class="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50">Cancel</button>
+          <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700">Add Candidate</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Schedule Interview Modal -->
+  <div id="scheduleModal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 overflow-hidden">
+      <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900">Schedule Interview</h3>
+      </div>
+      <form id="scheduleForm" class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Candidate *</label>
+          <select name="candidateId" required class="w-full border border-gray-300 rounded-lg px-3 py-2" id="scheduleCandidateSelect"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+            <input type="date" name="date" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Time *</label>
+            <input type="time" name="time" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+          <select name="duration" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+            <option value="30">30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60" selected>60 minutes</option>
+            <option value="90">90 minutes</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Interview Type *</label>
+          <select name="type" required class="w-full border border-gray-300 rounded-lg px-3 py-2">
+            <option value="Phone Screen">Phone Screen</option>
+            <option value="Technical Interview">Technical Interview</option>
+            <option value="Behavioral Interview">Behavioral Interview</option>
+            <option value="Final Interview">Final Interview</option>
+            <option value="HR Interview">HR Interview</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Interviewers</label>
+          <input type="text" name="interviewers" placeholder="John Doe, Jane Smith" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Location/Link</label>
+          <input type="text" name="location" placeholder="Google Meet, Zoom, Office" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+        </div>
+        <div class="flex space-x-3 pt-4">
+          <button type="button" onclick="closeScheduleModal()" class="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50">Cancel</button>
+          <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700">Schedule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Candidate Detail Modal -->
+  <div id="candidateDetailModal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center">
+    <div class="bg-white rounded-2xl max-w-lg w-full mx-4 overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-gray-900" id="candidateDetailName">Candidate</h3>
+        <button onclick="closeCandidateDetailModal()" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="p-6" id="candidateDetailContent"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-full opacity-0 transition-all duration-300 z-50">
+    <span id="toastMessage">Success!</span>
+  </div>
+
+  <script>
+    // Demo data - stored in localStorage for persistence
+    const defaultCandidates = [
+      { id: '1', name: 'Sarah Johnson', email: 'sarah.j@email.com', phone: '555-0101', position: 'Senior Developer', stage: 'interview', appliedDate: '2026-01-15', notes: 'Strong React experience' },
+      { id: '2', name: 'Michael Chen', email: 'mchen@email.com', phone: '555-0102', position: 'Product Manager', stage: 'phone_screen', appliedDate: '2026-01-18', notes: 'Ex-Google PM' },
+      { id: '3', name: 'Emily Davis', email: 'emily.d@email.com', phone: '555-0103', position: 'UX Designer', stage: 'applied', appliedDate: '2026-01-20', notes: 'Great portfolio' },
+      { id: '4', name: 'James Wilson', email: 'jwilson@email.com', phone: '555-0104', position: 'Senior Developer', stage: 'offer', appliedDate: '2026-01-10', notes: 'Negotiating salary' },
+      { id: '5', name: 'Lisa Martinez', email: 'lisa.m@email.com', phone: '555-0105', position: 'Data Analyst', stage: 'hired', appliedDate: '2026-01-05', notes: 'Started Jan 20' },
+      { id: '6', name: 'David Brown', email: 'dbrown@email.com', phone: '555-0106', position: 'DevOps Engineer', stage: 'applied', appliedDate: '2026-01-21', notes: 'AWS certified' }
+    ];
+
+    const defaultInterviews = [
+      { id: '1', candidateId: '1', candidateName: 'Sarah Johnson', position: 'Senior Developer', date: '2026-01-24', time: '10:00', duration: 60, type: 'Technical Interview', interviewers: ['John Smith', 'Jane Doe'], location: 'Google Meet', status: 'scheduled' },
+      { id: '2', candidateId: '2', candidateName: 'Michael Chen', position: 'Product Manager', date: '2026-01-23', time: '14:00', duration: 30, type: 'Phone Screen', interviewers: ['HR Team'], location: 'Phone Call', status: 'scheduled' }
+    ];
+
+    // State
+    let candidates = JSON.parse(localStorage.getItem('ats_candidates')) || defaultCandidates;
+    let interviews = JSON.parse(localStorage.getItem('ats_interviews')) || defaultInterviews;
+    let draggedCandidate = null;
+
+    // Save to localStorage
+    function saveData() {
+      localStorage.setItem('ats_candidates', JSON.stringify(candidates));
+      localStorage.setItem('ats_interviews', JSON.stringify(interviews));
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      renderCandidates();
+      renderInterviews();
+      updateStats();
+      setupDragAndDrop();
+      setupForms();
+    });
+
+    function updateStats() {
+      document.getElementById('statTotal').textContent = candidates.length;
+      document.getElementById('statInterview').textContent = candidates.filter(c => c.stage === 'interview').length;
+      document.getElementById('statUpcoming').textContent = interviews.filter(i => i.status === 'scheduled').length;
+      document.getElementById('statThisWeek').textContent = interviews.length;
+    }
+
+    function renderCandidates() {
+      const stages = ['applied', 'phone_screen', 'interview', 'offer', 'hired'];
+      stages.forEach(stage => {
+        const container = document.querySelector(`.candidates-container[data-stage="${stage}"]`);
+        const stageCandidates = candidates.filter(c => c.stage === stage);
+        const countEl = document.querySelector(`.stage-count[data-stage="${stage}"]`);
+        if (countEl) countEl.textContent = stageCandidates.length;
+
+        container.innerHTML = stageCandidates.map(c => `
+          <div class="candidate-card bg-white rounded-lg p-3 shadow-sm border border-gray-200 hover:shadow-md transition"
+               draggable="true" data-id="${c.id}" onclick="openCandidateDetail('${c.id}')">
+            <div class="flex items-start justify-between">
+              <div class="flex-1 min-w-0">
+                <h4 class="font-medium text-gray-900 truncate">${c.name}</h4>
+                <p class="text-sm text-gray-500 truncate">${c.position}</p>
+              </div>
+            </div>
+            <div class="mt-2 flex items-center text-xs text-gray-400">
+              <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              ${c.appliedDate}
+            </div>
+            ${c.notes ? `<p class="mt-2 text-xs text-gray-500 truncate">${c.notes}</p>` : ''}
+          </div>
+        `).join('');
+
+        container.querySelectorAll('.candidate-card').forEach(card => {
+          card.addEventListener('dragstart', handleDragStart);
+          card.addEventListener('dragend', handleDragEnd);
+        });
+      });
+      updateStats();
+    }
+
+    function renderInterviews() {
+      const tbody = document.getElementById('interviewsTableBody');
+      tbody.innerHTML = interviews.map(i => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${i.candidateName}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${i.position}</td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm text-gray-900">${i.date}</div>
+            <div class="text-sm text-gray-500">${i.time} (${i.duration} min)</div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">${i.type}</span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${i.interviewers?.join(', ') || '-'}</td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">${i.status}</span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm">
+            <button onclick="sendReminder('${i.id}')" class="text-blue-600 hover:text-blue-800 mr-3" title="Send Reminder">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+              </svg>
+            </button>
+            <button onclick="cancelInterview('${i.id}')" class="text-red-600 hover:text-red-800" title="Cancel">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Drag and drop
+    function setupDragAndDrop() {
+      document.querySelectorAll('.stage-card').forEach(card => {
+        card.addEventListener('dragover', handleDragOver);
+        card.addEventListener('drop', handleDrop);
+        card.addEventListener('dragleave', handleDragLeave);
+      });
+    }
+
+    function handleDragStart(e) {
+      draggedCandidate = e.target.dataset.id;
+      e.target.classList.add('opacity-50');
+    }
+
+    function handleDragEnd(e) {
+      e.target.classList.remove('opacity-50');
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.currentTarget.classList.add('ring-2', 'ring-blue-400');
+    }
+
+    function handleDragLeave(e) {
+      e.currentTarget.classList.remove('ring-2', 'ring-blue-400');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('ring-2', 'ring-blue-400');
+      const stage = e.currentTarget.dataset.stage;
+      if (draggedCandidate && stage) {
+        const candidate = candidates.find(c => c.id === draggedCandidate);
+        if (candidate) {
+          candidate.stage = stage;
+          saveData();
+          renderCandidates();
+          showToast(`Moved to ${stage.replace('_', ' ')}`);
+        }
+      }
+      draggedCandidate = null;
+    }
+
+    // Forms
+    function setupForms() {
+      document.getElementById('addCandidateForm').addEventListener('submit', addCandidate);
+      document.getElementById('scheduleForm').addEventListener('submit', scheduleInterview);
+    }
+
+    function addCandidate(e) {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const newCandidate = {
+        id: Date.now().toString(),
+        name: formData.get('name'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        position: formData.get('position'),
+        notes: formData.get('notes'),
+        stage: 'applied',
+        appliedDate: new Date().toISOString().split('T')[0]
+      };
+      candidates.push(newCandidate);
+      saveData();
+      renderCandidates();
+      closeAddCandidateModal();
+      e.target.reset();
+      showToast('Candidate added!');
+    }
+
+    function scheduleInterview(e) {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const candidate = candidates.find(c => c.id === formData.get('candidateId'));
+      const newInterview = {
+        id: Date.now().toString(),
+        candidateId: formData.get('candidateId'),
+        candidateName: candidate ? candidate.name : 'Unknown',
+        position: candidate ? candidate.position : '',
+        date: formData.get('date'),
+        time: formData.get('time'),
+        duration: parseInt(formData.get('duration')),
+        type: formData.get('type'),
+        interviewers: formData.get('interviewers') ? formData.get('interviewers').split(',').map(i => i.trim()) : [],
+        location: formData.get('location'),
+        status: 'scheduled'
+      };
+      interviews.push(newInterview);
+
+      if (candidate && ['applied', 'phone_screen'].includes(candidate.stage)) {
+        candidate.stage = 'interview';
+      }
+
+      saveData();
+      renderCandidates();
+      renderInterviews();
+      closeScheduleModal();
+      e.target.reset();
+      showToast('Interview scheduled!');
+    }
+
+    function sendReminder(id) {
+      const interview = interviews.find(i => i.id === id);
+      showToast(`Reminder sent to ${interview.candidateName}!`);
+    }
+
+    function cancelInterview(id) {
+      if (confirm('Cancel this interview?')) {
+        interviews = interviews.filter(i => i.id !== id);
+        saveData();
+        renderInterviews();
+        showToast('Interview cancelled');
+      }
+    }
+
+    function openCandidateDetail(id) {
+      event.stopPropagation();
+      const c = candidates.find(c => c.id === id);
+      if (!c) return;
+      document.getElementById('candidateDetailName').textContent = c.name;
+      document.getElementById('candidateDetailContent').innerHTML = `
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div><p class="text-sm text-gray-500">Position</p><p class="font-medium">${c.position}</p></div>
+            <div><p class="text-sm text-gray-500">Stage</p><p class="font-medium capitalize">${c.stage.replace('_', ' ')}</p></div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div><p class="text-sm text-gray-500">Email</p><p class="font-medium">${c.email}</p></div>
+            <div><p class="text-sm text-gray-500">Phone</p><p class="font-medium">${c.phone || '-'}</p></div>
+          </div>
+          <div><p class="text-sm text-gray-500">Applied</p><p class="font-medium">${c.appliedDate}</p></div>
+          ${c.notes ? `<div><p class="text-sm text-gray-500">Notes</p><p class="text-gray-700">${c.notes}</p></div>` : ''}
+          <div class="flex space-x-3 pt-4">
+            <button onclick="scheduleForCandidate('${c.id}')" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700">Schedule Interview</button>
+            <button onclick="deleteCandidate('${c.id}')" class="px-4 py-2 border border-red-300 text-red-600 rounded-lg font-medium hover:bg-red-50">Delete</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('candidateDetailModal').classList.add('active');
+    }
+
+    function closeCandidateDetailModal() {
+      document.getElementById('candidateDetailModal').classList.remove('active');
+    }
+
+    function scheduleForCandidate(id) {
+      closeCandidateDetailModal();
+      openScheduleModal(id);
+    }
+
+    function deleteCandidate(id) {
+      if (confirm('Delete this candidate?')) {
+        candidates = candidates.filter(c => c.id !== id);
+        saveData();
+        renderCandidates();
+        closeCandidateDetailModal();
+        showToast('Candidate deleted');
+      }
+    }
+
+    function saveSettings() {
+      const name = document.getElementById('settingsCompanyName').value;
+      document.getElementById('companyName').textContent = name || 'ATS Pro';
+      showToast('Settings saved!');
+    }
+
+    // Modals
+    function openAddCandidateModal() {
+      document.getElementById('addCandidateModal').classList.add('active');
+    }
+    function closeAddCandidateModal() {
+      document.getElementById('addCandidateModal').classList.remove('active');
+    }
+    function openScheduleModal(preselectedId = null) {
+      const select = document.getElementById('scheduleCandidateSelect');
+      select.innerHTML = candidates.map(c => `<option value="${c.id}" ${c.id === preselectedId ? 'selected' : ''}>${c.name} - ${c.position}</option>`).join('');
+      document.getElementById('scheduleModal').classList.add('active');
+    }
+    function closeScheduleModal() {
+      document.getElementById('scheduleModal').classList.remove('active');
+    }
+
+    // Tabs
+    function showTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('text-blue-600', 'bg-blue-50');
+        btn.classList.add('text-gray-600');
+      });
+      document.getElementById(tabName).classList.add('active');
+      document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('text-blue-600', 'bg-blue-50');
+      document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.remove('text-gray-600');
+    }
+
+    // Toast
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMessage').textContent = message;
+      toast.classList.remove('translate-y-full', 'opacity-0');
+      setTimeout(() => toast.classList.add('translate-y-full', 'opacity-0'), 3000);
+    }
+
+    // Close modals on backdrop click
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('active'); });
+    });
+  </script>
+</body>
+</html>
